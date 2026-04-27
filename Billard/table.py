@@ -2,35 +2,27 @@
 from bille import Bille, BilleBlanche, BilleNumerotee
 
 class Table:
-    """
-    Représente le tapis de billard.
-    Gère les billes, les collisions et les trous.
-    """
 
-    # Positions des 6 trous (coins + milieu des grands côtés)
     TROUS = [
-        (0, 0), (400, 0), (800, 0),
-        (0, 500), (400, 500), (800, 500)
+        (0, 0), (4000, 0), (8000, 0),
+        (0, 5000), (4000, 5000), (8000, 5000)
     ]
-    RAYON_TROU = 20.0
+    RAYON_TROU = 200.0
 
-    def __init__(self, largeur: float = 800.0, hauteur: float = 500.0):
-        """
-        Args:
-            largeur: largeur de la table en pixels
-            hauteur: hauteur de la table en pixels
-        """
+    def __init__(self, largeur: float = 8000.0, hauteur: float = 5000.0):
         self.largeur = largeur
         self.hauteur = hauteur
         self.billes = []
         self._initialiser_billes()
+        self.nb_bille_rentre=0
+
+
 
     def _initialiser_billes(self):
         """Place la bille blanche et les 15 billes numérotées."""
         # Bille blanche
-        self.billes.append(BilleBlanche(200, 250))
+        self.billes.append(BilleBlanche(2000, 2500))
 
-        # Couleurs des billes 1 à 15
         couleurs = [
             "jaune", "bleu", "rouge", "violet", "orange",
             "vert", "marron", "noir",
@@ -39,25 +31,16 @@ class Table:
         ]
 
         # Disposition en triangle côté droit
-        positions = self._calculer_positions_triangle(600, 250)
+        positions = self._calculer_positions_triangle(6000, 2500)
         for i, (x, y) in enumerate(positions):
             self.billes.append(
                 BilleNumerotee(x, y, i + 1, couleurs[i])
             )
 
     def _calculer_positions_triangle(self, x_depart: float, y_centre: float):
-        """
-        Calcule les positions en triangle pour les 15 billes.
-
-        Args:
-            x_depart: position x du sommet du triangle
-            y_centre: position y du centre
-        Returns:
-            liste de tuples (x, y)
-        """
         positions = []
-        espacement = 22  # légèrement plus grand que le diamètre
-        rangees = [1, 2, 3, 4, 5]  # 1+2+3+4+5 = 15 billes
+        espacement = 21
+        rangees = [1, 2, 3, 4, 5]
 
         for rang, nb in enumerate(rangees):
             x = x_depart + rang * espacement
@@ -75,13 +58,11 @@ class Table:
                 self._rebondir_bords(bille)
                 self._verifier_trou(bille)
 
-    def _rebondir_bords(self, bille: Bille):
-        """
-        Fait rebondir une bille sur les bords de la table.
+    def _nb_bille_rentre(self):
+        return self.nb_bille_rentre
 
-        Args:
-            bille: la bille à vérifier
-        """
+
+    def _rebondir_bords(self, bille: Bille):
         if bille.x - bille.rayon <= 0:
             bille.x = bille.rayon
             bille.vitesse_x *= -1
@@ -97,21 +78,19 @@ class Table:
             bille.vitesse_y *= -1
 
     def _verifier_trou(self, bille: Bille):
-        """
-        Vérifie si une bille est tombée dans un trou.
 
-        Args:
-            bille: la bille à vérifier
-        """
         for (tx, ty) in self.TROUS:
             distance = ((bille.x - tx) ** 2 + (bille.y - ty) ** 2) ** 0.5
             if distance < self.RAYON_TROU:
+                self.nb_bille_rentre += 1
                 bille.empochee = True
                 bille.vitesse_x = 0.0
                 bille.vitesse_y = 0.0
 
+
+
+
     def detecter_collisions(self):
-        """Détecte et gère les collisions entre toutes les billes."""
         for i in range(len(self.billes)):
             for j in range(i + 1, len(self.billes)):
                 b1 = self.billes[i]
@@ -120,18 +99,12 @@ class Table:
                     self._resoudre_collision(b1, b2)
 
     def _resoudre_collision(self, b1: Bille, b2: Bille):
-        """
-        Résout la collision entre deux billes (échange de vitesses simplifié).
-
-        Args:
-            b1, b2: les deux billes en collision
-        """
         dx = b2.x - b1.x
         dy = b2.y - b1.y
         distance = (dx ** 2 + dy ** 2) ** 0.5
 
         if distance < b1.rayon + b2.rayon and distance > 0:
-            # Échange des vitesses (collision élastique simplifiée)
+            # Échange des vitesses
             b1.vitesse_x, b2.vitesse_x = b2.vitesse_x, b1.vitesse_x
             b1.vitesse_y, b2.vitesse_y = b2.vitesse_y, b1.vitesse_y
 
@@ -143,12 +116,6 @@ class Table:
             b2.y += overlap * dy / distance
 
     def est_arretee(self) -> bool:
-        """
-        Vérifie si toutes les billes sont immobiles.
-
-        Returns:
-            True si aucune bille ne bouge
-        """
         return all(not b.est_en_mouvement() for b in self.billes
                    if not b.empochee)
 

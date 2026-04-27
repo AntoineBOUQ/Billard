@@ -6,15 +6,7 @@ class Bille:
     Contient les attributs et comportements communs à toutes les billes.
     """
 
-    def __init__(self, x: float, y: float, rayon: float = 10.0):
-        """
-        Initialise une bille avec sa position et son rayon.
-
-        Args:
-            x: position horizontale (en pixels)
-            y: position verticale (en pixels)
-            rayon: rayon de la bille (par défaut 10.0)
-        """
+    def __init__(self, x: float, y: float, rayon: float = 100.0):
         self.x = x
         self.y = y
         self.rayon = rayon
@@ -30,7 +22,7 @@ class Bille:
         self.x += self.vitesse_x
         self.y += self.vitesse_y
 
-        frottement = 0.98
+        frottement = 0.998
         self.vitesse_x *= frottement
         self.vitesse_y *= frottement
 
@@ -40,12 +32,6 @@ class Bille:
             self.vitesse_y = 0.0
 
     def est_en_mouvement(self) -> bool:
-        """
-        Indique si la bille est encore en mouvement.
-
-        Returns:
-            True si la bille bouge encore
-        """
         return self.vitesse_x != 0.0 or self.vitesse_y != 0.0
 
     def __str__(self) -> str:
@@ -53,23 +39,12 @@ class Bille:
 
 
 class BilleBlanche(Bille):
-    """
-    La bille blanche, seule bille que le joueur peut frapper.
-    Hérite de Bille.
-    """
 
     def __init__(self, x: float, y: float):
         super().__init__(x, y)
         self.est_jouable = True
 
     def reinitialiser(self, x: float, y: float):
-        """
-        Replace la bille blanche si elle a été empochée par erreur.
-
-        Args:
-            x: nouvelle position x
-            y: nouvelle position y
-        """
         self.x = x
         self.y = y
         self.vitesse_x = 0.0

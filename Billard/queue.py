@@ -15,24 +15,9 @@ class Queue:
         self.force_max = 20.0   # force maximale d'un coup
 
     def viser(self, angle: float):
-        """
-        Oriente la queue selon un angle.
-
-        Args:
-            angle: angle en radians
-        """
         self.angle = angle
 
     def frapper(self, bille: BilleBlanche, force: float):
-        """
-        Frappe la bille blanche avec une force donnée.
-        Convertit la force et l'angle en vitesse x/y.
-
-        Args:
-            bille: la bille blanche à frapper
-            force: intensité du coup (entre 0.0 et 1.0)
-        """
-        # On limite la force entre 0 et 1
         force = max(0.0, min(1.0, force))
         puissance = force * self.force_max
 
