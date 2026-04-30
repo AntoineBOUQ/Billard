@@ -1,9 +1,13 @@
 # main.py
 from Billard import bille, table
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
+from interfacepy import FenetreDebut
 from jeu import Jeu
+import sys
 
 
 def main():
+
     print("=== Billard ===")
     nom1 = input("Nom du joueur 1 : ")
     nom2 = input("Nom du joueur 2 : ")
@@ -33,8 +37,9 @@ def main():
 
             if jeu.table.est_arretee():
                 break
-        if jeu.nb_bille_rentre()>nb_bille_empoche:
+        if jeu.nb_bille_rentre()==nb_bille_empoche:
             jeu._changer_tour()
+        else:
             nb_bille_empoche=jeu.nb_bille_rentre()
 
         jeu.sauvegarder()
@@ -45,4 +50,8 @@ def main():
         print(f"\n {jeu.gagnant.nom} a gagné en {jeu.nb_coups} coups !")
 
 if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    fenetre = FenetreDebut()
+    fenetre.show()
+    sys.exit(app.exec())
     main()
