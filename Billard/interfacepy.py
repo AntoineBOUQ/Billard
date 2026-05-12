@@ -5,7 +5,7 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
 from PyQt6.QtCore import QTimer
 
-from jeu import Jeu
+from Jeu import Jeu
 
 
 class FenetreDebut(QMainWindow):
