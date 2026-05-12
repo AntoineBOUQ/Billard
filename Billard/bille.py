@@ -1,76 +1,69 @@
-# bille.py
 
 class Bille:
     """
     Classe mère représentant une bille de billard.
-    Contient les attributs et comportements communs à toutes les billes.
     """
 
-    def __init__(self, x: float, y: float, rayon: float = 100.0):
-        self.x = x
-        self.y = y
-        self.rayon = rayon
-        self.vitesse_x = 0.0
-        self.vitesse_y = 0.0
-        self.empochee = False
+    #___Initialisation___
+    def __init__(self, x: float, y: float, rayon: float = 12.0):
+        self.x = x                  # position horizontale (coordonnées logiques 0..800)
+        self.y = y                  # position verticale (coordonnées logiques 0..500)
+        self.rayon = rayon          # rayon en pixels logiques
+        self.vitesse_x = 0.0        # composante horizontale de la vitesse
+        self.vitesse_y = 0.0        # composante verticale de la vitesse
+        self.empochee = False       # passe à True quand la bille tombe dans un trou
 
+    #___Déplacement d'une frame avec frottement___
     def deplacer(self):
-        """
-        Met à jour la position selon la vitesse actuelle
-        et applique un frottement pour ralentir progressivement.
-        """
+        # Mise à jour de la position selon la vitesse
         self.x += self.vitesse_x
         self.y += self.vitesse_y
 
-        frottement = 0.998
+        # Application du frottement : à chaque image, on perd 2% de la vitesse
+        frottement = 0.98
         self.vitesse_x *= frottement
         self.vitesse_y *= frottement
 
+        # Quand la vitesse devient très faible, on l'arrête.
+        # (sinon le frottement multiplicatif n'atteindrait jamais 0)
         if abs(self.vitesse_x) < 0.01:
             self.vitesse_x = 0.0
         if abs(self.vitesse_y) < 0.01:
             self.vitesse_y = 0.0
 
+    #___Vérification de mouvement___
     def est_en_mouvement(self) -> bool:
+        # Renvoie True si la bille a encore une vitesse non nulle
         return self.vitesse_x != 0.0 or self.vitesse_y != 0.0
-
-    def __str__(self) -> str:
-        return f"Bille à ({self.x:.1f}, {self.y:.1f})"
 
 
 class BilleBlanche(Bille):
+    """Classe fille de Bille, représente la bille blanche."""
 
+    #___Initialisation___
     def __init__(self, x: float, y: float):
-        super().__init__(x, y)
-        self.est_jouable = True
+        super().__init__(x, y)      # on appelle l'init de la classe mère
+        self.est_jouable = True     # propre à la blanche
 
+    #___Remise en jeu après un scratch___
     def reinitialiser(self, x: float, y: float):
+        # Replace la blanche à la position donnée, vitesse nulle, plus empochée
         self.x = x
         self.y = y
         self.vitesse_x = 0.0
         self.vitesse_y = 0.0
         self.empochee = False
 
-    def __str__(self):
-        return f"Bille blanche à ({self.x:.1f}, {self.y:.1f})"
 
 
 class BilleNumerotee(Bille):
     """
-    Une bille numérotée (1 à 15).
-    Hérite de Bille et ajoute un numéro et une couleur.
+    Classe fille de Bille, représente une bille numérotée (1 à 15).
     """
 
+    #___Initialisation___
     def __init__(self, x: float, y: float, numero: int, couleur: str):
-        """
-        Args:
-            numero: numéro de la bille (1 à 15)
-            couleur: couleur de la bille (ex: "rouge", "jaune")
-        """
         super().__init__(x, y)
-        self.numero = numero
-        self.couleur = couleur
-
-    def __str__(self):
-        return f"Bille n°{self.numero} ({self.couleur}) à ({self.x:.1f}, {self.y:.1f})"
+        self.numero = numero        # numéro 1..15
+        self.couleur = couleur      # nom textuel de la couleur
 
