@@ -9,7 +9,9 @@ class TableBillard(QWidget):
     # Dimensions logiques de la table (référentiel utilisé par Table)
     LARGEUR_LOGIQUE = 800
     HAUTEUR_LOGIQUE = 500
-
+    BISEAU = 50
+    RAYON_TROU = 18
+    MARGE_CADRE = 25
     # Signal émis quand le joueur clique sur la table pour tirer.
     # Il transporte l'angle de visée en radians.
     angle_choisi = pyqtSignal(float)
@@ -22,7 +24,7 @@ class TableBillard(QWidget):
         # Le widget peut s'étirer dans son parent
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setMinimumSize(400, 250)
-
+        self.couleur_bois = QColor(74, 48, 24)
         # Permet à mouseMoveEvent d'être appelé sans bouton enfoncé
         self.setMouseTracking(True)
 
@@ -37,18 +39,21 @@ class TableBillard(QWidget):
         self.visee_active = True
 
     #___Calcul de la mise à l'échelle (logique → pixels)___
+        # ___Calcul de la mise à l'échelle (logique → pixels)___
     def _calculer_transformation(self):
-        """
-        Renvoie (échelle, dx, dy) : facteur de zoom et décalage pour centrer
-        la table 800x500 dans le widget tout en gardant le ratio.
-        """
+
         w = self.width()
         h = self.height()
-        echelle = min(w / self.LARGEUR_LOGIQUE, h / self.HAUTEUR_LOGIQUE)
-        largeur_table = self.LARGEUR_LOGIQUE * echelle
-        hauteur_table = self.HAUTEUR_LOGIQUE * echelle
-        dx = (w - largeur_table) / 2
-        dy = (h - hauteur_table) / 2
+        marge = self.MARGE_CADRE
+
+            # Taille totale à faire rentrer = table + cadre des deux côtés
+        largeur_totale = self.LARGEUR_LOGIQUE + 2 * marge
+        hauteur_totale = self.HAUTEUR_LOGIQUE + 2 * marge
+
+        echelle = min(w / largeur_totale, h / hauteur_totale)
+
+        dx = (w - largeur_totale * echelle) / 2 + marge * echelle
+        dy = (h - hauteur_totale * echelle) / 2 + marge * echelle
         return echelle, dx, dy
 
     #___Conversion inverse (pixels → logique)___
@@ -102,60 +107,76 @@ class TableBillard(QWidget):
 
     # ───── Dessin ─────
 
-    #___Méthode appelée par Qt à chaque redessin___
+        # ___Méthode appelée par Qt à chaque redessin___
     def paintEvent(self, event):
         peintre = QPainter(self)
         peintre.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # Fond noir (visible si le ratio du widget ne correspond pas à 8:5)
+            # 1. Fond extérieur neutre (gris) — ce qu'on voit AU-DELÀ du cadre
         peintre.fillRect(self.rect(), QColor(40, 40, 40))
 
-        # Application de la transformation : à partir d'ici on dessine
-        # en coordonnées logiques 0..800 / 0..500
+            # 2. Transformation logique → pixels
         echelle, dx, dy = self._calculer_transformation()
         peintre.translate(dx, dy)
         peintre.scale(echelle, echelle)
 
-        # Tapis vert
-        peintre.setBrush(QBrush(QColor(0, 100, 0)))
-        peintre.setPen(Qt.PenStyle.NoPen)
-        peintre.drawRect(0, 0, self.LARGEUR_LOGIQUE, self.HAUTEUR_LOGIQUE)
+        W = self.LARGEUR_LOGIQUE
+        H = self.HAUTEUR_LOGIQUE
+        b = self.BISEAU
 
-        # Trous (6 cercles noirs aux coins et au milieu des longs côtés)
+        # 3. Cadre en bois marron : rectangle qui déborde du tapis des 4 côtés
+        marge = 18
+        peintre.setPen(Qt.PenStyle.NoPen)
+        peintre.setBrush(QBrush(self.couleur_bois))  # marron
+        peintre.drawRect(int(-marge), int(-marge),
+                         int(W + 2 * marge), int(H + 2 * marge))
+
+            # 4. Tapis vert (par-dessus le cadre)
+        peintre.setBrush(QBrush(QColor(0, 100, 0)))
+        peintre.drawRect(0, 0, W, H)
+
+            # 5. Biseaux des coins (triangles marron) : la diagonale est une bande
+        peintre.setBrush(QBrush(self.couleur_bois))
+        peintre.drawPolygon(QPolygonF([QPointF(0, 0), QPointF(b, 0), QPointF(0, b)]))
+        peintre.drawPolygon(QPolygonF([QPointF(W, 0), QPointF(W - b, 0), QPointF(W, b)]))
+        peintre.drawPolygon(QPolygonF([QPointF(0, H), QPointF(b, H), QPointF(0, H - b)]))
+        peintre.drawPolygon(QPolygonF([QPointF(W, H), QPointF(W - b, H), QPointF(W, H - b)]))
+
+            # 6. Trous : 4 coins (au milieu du biseau) + 2 milieux
         peintre.setBrush(QBrush(Qt.GlobalColor.black))
-        rayon_trou = 18
+        rayon_trou = self.RAYON_TROU
         positions_trous = [
-            (0, 0), (self.LARGEUR_LOGIQUE // 2, 0), (self.LARGEUR_LOGIQUE, 0),
-            (0, self.HAUTEUR_LOGIQUE),
-            (self.LARGEUR_LOGIQUE // 2, self.HAUTEUR_LOGIQUE),
-            (self.LARGEUR_LOGIQUE, self.HAUTEUR_LOGIQUE),
+            (b / 2, b / 2),
+            (W - b / 2, b / 2),
+            (b / 2, H - b / 2),
+            (W - b / 2, H - b / 2),
+            (W / 2, 0),
+            (W / 2, H),
         ]
         for x, y in positions_trous:
-            peintre.drawEllipse(x - rayon_trou, y - rayon_trou,
+            peintre.drawEllipse(int(x - rayon_trou), int(y - rayon_trou),
                                 rayon_trou * 2, rayon_trou * 2)
 
-        # Ligne de service et cercle de service (côté blanche)
+            # 7. Ligne de service et cercle de service (côté blanche)
         peintre.setPen(QPen(QColor(255, 255, 255, 80), 1))
         peintre.setBrush(Qt.BrushStyle.NoBrush)
-        x_service = self.LARGEUR_LOGIQUE // 4
-        peintre.drawLine(x_service, 0, x_service, self.HAUTEUR_LOGIQUE)
+        x_service = W // 4
+        peintre.drawLine(x_service, 0, x_service, H)
         rayon_cercle = 60
-        peintre.drawEllipse(x_service - rayon_cercle,
-                            self.HAUTEUR_LOGIQUE // 2 - rayon_cercle,
+        peintre.drawEllipse(x_service - rayon_cercle, H // 2 - rayon_cercle,
                             rayon_cercle * 2, rayon_cercle * 2)
 
-        # Billes : on les dessine seulement si la table est branchée
+            # 8. Billes
         if self.table is not None and hasattr(self.table, "billes"):
             for i, bille in enumerate(self.table.billes):
-                if bille.empochee:      # bille tombée → on ne la dessine pas
+                if bille.empochee:
                     continue
                 couleur = self.table.billes_couleur[i]
-                if i <= 8:               # 0 = blanche, 1..8 = pleines
+                if i <= 8:
                     self._dessiner_boule_pleine(peintre, bille.x, bille.y, couleur)
-                else:                    # 9..15 = rayées
+                else:
                     self._dessiner_boule_rayee(peintre, bille.x, bille.y, couleur)
 
-            # Flèche de visée — seulement si la blanche est en jeu et la souris présente
             blanche = self.table.get_bille_blanche()
             if (self.visee_active and not blanche.empochee
                     and self.curseur_x is not None):

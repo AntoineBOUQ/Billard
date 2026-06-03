@@ -1,19 +1,21 @@
-
 from bille import Bille, BilleBlanche, BilleNumerotee
 
 
 class Table:
-    # Position des 6 trous (en coordonnées logiques)
-    TROUS = [(0, 0), (400, 0), (800, 0),
-             (0, 500), (400, 500), (800, 500)]
-    # Rayon d'attraction d'un trou : si une bille passe dans ce rayon, elle tombe
-    RAYON_TROU = 20.0
+    #___Paramètres géométriques de la table___
+    BISEAU = 50.0               # longueur du biseau le long de chaque bord (aux coins)
+    RAYON_TROU_COIN = 22.0      # rayon d'empochage des poches de coin
+    RAYON_TROU_MILIEU = 22.0    # rayon d'empochage des poches du milieu
 
     #___Initialisation___
     def __init__(self, largeur: float = 800.0, hauteur: float = 500.0):
         self.largeur = largeur
         self.hauteur = hauteur
         self.billes = []        # liste de toutes les billes du jeu
+
+        # Géométrie calculée à partir des dimensions (poches + bandes)
+        self.trous = self._calculer_trous()
+        self.bandes = self._calculer_bandes()
 
         # Couleurs RGB de chaque bille
         self.billes_couleur = [
@@ -24,6 +26,36 @@ class Table:
         ]
         self._initialiser_billes()      # crée les 16 billes
         self.nb_bille_rentre = 0        # compteur de billes numérotées empochées
+
+    #___Position des 6 poches (x, y, rayon d'empochage)___
+    def _calculer_trous(self):
+        W, H, b = self.largeur, self.hauteur, self.BISEAU
+        rc, rm = self.RAYON_TROU_COIN, self.RAYON_TROU_MILIEU
+        # Les poches de coin sont placées au milieu du biseau (et non plus dans l'angle)
+        return [
+            (b / 2,      b / 2,      rc),   # coin haut-gauche
+            (W - b / 2,  b / 2,      rc),   # coin haut-droit
+            (b / 2,      H - b / 2,  rc),   # coin bas-gauche
+            (W - b / 2,  H - b / 2,  rc),   # coin bas-droit
+            (W / 2,      0.0,        rm),   # milieu haut
+            (W / 2,      H,          rm),   # milieu bas
+        ]
+
+    #___Liste des bandes (segments sur lesquels les billes rebondissent)___
+    def _calculer_bandes(self):
+        W, H, b = self.largeur, self.hauteur, self.BISEAU
+        return [
+            # Bandes droites (raccourcies pour laisser la place aux biseaux)
+            ((b, 0), (W - b, 0)),          # bande haute
+            ((b, H), (W - b, H)),          # bande basse
+            ((0, b), (0, H - b)),          # bande gauche
+            ((W, b), (W, H - b)),          # bande droite
+            # Biseaux des 4 coins (les "petites bandes" en diagonale)
+            ((b, 0), (0, b)),              # haut-gauche
+            ((W - b, 0), (W, b)),          # haut-droit
+            ((0, H - b), (b, H)),          # bas-gauche
+            ((W, H - b), (W - b, H)),      # bas-droit
+        ]
 
     #___Création des billes___
     def _initialiser_billes(self):
@@ -63,51 +95,76 @@ class Table:
         for bille in self.billes:
             if not bille.empochee:                  # on ignore les billes déjà sorties
                 bille.deplacer()                    # mouvement et frottement
-                self._rebondir_bords(bille)         # rebond sur les bords
-                self._verifier_trou(bille)          # vérifie si elle tombe
+                self._verifier_trou(bille)          # 1. empochage (PRIORITAIRE)
+                if not bille.empochee:
+                    self._rebondir_sur_bandes(bille)  # 2. rebonds (bords + biseaux)
 
     #___Accesseur du compteur___
     def _nb_bille_rentre(self):
         return self.nb_bille_rentre
 
-    #___Rebonds sur les bords de la table___
-    def _rebondir_bords(self, bille: Bille):
-        # Bord gauche
-        if bille.x - bille.rayon <= 0:
-            bille.x = bille.rayon       # on recolle la bille au bord
-            bille.vitesse_x *= -1       # on inverse la vitesse horizontale
-        # Bord droit
-        elif bille.x + bille.rayon >= self.largeur:
-            bille.x = self.largeur - bille.rayon
-            bille.vitesse_x *= -1
+    #___Rebonds sur toutes les bandes (bords droits + biseaux)___
+    def _rebondir_sur_bandes(self, bille: Bille):
+        for (p1, p2) in self.bandes:
+            self._rebond_segment(bille, p1, p2)
 
-        # Bord haut
-        if bille.y - bille.rayon <= 0:
-            bille.y = bille.rayon
-            bille.vitesse_y *= -1
-        # Bord bas
-        elif bille.y + bille.rayon >= self.hauteur:
-            bille.y = self.hauteur - bille.rayon
-            bille.vitesse_y *= -1
+    #___Rebond d'une bille sur un segment de bande quelconque___
+    def _rebond_segment(self, bille: Bille, p1, p2):
+        x1, y1 = p1
+        x2, y2 = p2
+        # Vecteur directeur du segment
+        dx = x2 - x1
+        dy = y2 - y1
+        longueur2 = dx * dx + dy * dy
+        if longueur2 == 0:
+            return
 
-    #___Vérifier si une bille tombe dans un trou___
+        # Projection du centre de la bille sur le segment (t borné entre 0 et 1)
+        t = ((bille.x - x1) * dx + (bille.y - y1) * dy) / longueur2
+        t = max(0.0, min(1.0, t))
+
+        # Point du segment le plus proche de la bille
+        px = x1 + t * dx
+        py = y1 + t * dy
+
+        # Distance bille ↔ segment
+        ecart_x = bille.x - px
+        ecart_y = bille.y - py
+        distance = (ecart_x ** 2 + ecart_y ** 2) ** 0.5
+
+        # Collision si la bille touche la bande
+        if 0 < distance < bille.rayon:
+            # Normale unitaire (du point de contact vers le centre de la bille)
+            nx = ecart_x / distance
+            ny = ecart_y / distance
+
+            # On replace la bille pour qu'elle ne traverse pas la bande
+            chevauchement = bille.rayon - distance
+            bille.x += nx * chevauchement
+            bille.y += ny * chevauchement
+
+            # Réflexion de la vitesse : v' = v - 2 (v·n) n
+            produit = bille.vitesse_x * nx + bille.vitesse_y * ny
+            if produit < 0:     # seulement si la bille fonce vers la bande
+                bille.vitesse_x -= 2 * produit * nx
+                bille.vitesse_y -= 2 * produit * ny
+
+    #___Vérifier si une bille tombe dans une poche___
     def _verifier_trou(self, bille):
-        for (tx, ty) in self.TROUS:
+        for (tx, ty, rayon) in self.trous:
             # Distance euclidienne entre la bille et le trou
             distance = ((bille.x - tx) ** 2 + (bille.y - ty) ** 2) ** 0.5
-            if distance < self.RAYON_TROU:
+            if distance < rayon:
                 bille.empochee = True
                 bille.vitesse_x = 0.0
                 bille.vitesse_y = 0.0
                 # Seules les billes numérotées comptent dans le compteur
-                # (la blanche, si elle tombe, sera repositionnée plus tard)
                 if not isinstance(bille, BilleBlanche):
                     self.nb_bille_rentre += 1
                 return
 
     #___Détection de toutes les collisions entre billes___
     def detecter_collisions(self):
-        # Double boucle pour tester toutes les paires (i,j) avec i<j
         for i in range(len(self.billes)):
             for j in range(i + 1, len(self.billes)):
                 b1 = self.billes[i]
@@ -122,11 +179,10 @@ class Table:
         dy = b2.y - b1.y
         distance = (dx ** 2 + dy ** 2) ** 0.5
 
-        # Pas de collision (les billes ne se touchent pas)
         if distance >= b1.rayon + b2.rayon or distance == 0:
             return
 
-        # Vecteur normal (de b1 vers b2, normalisé = longueur 1)
+        # Vecteur normal (de b1 vers b2, normalisé)
         nx = dx / distance
         ny = dy / distance
 
@@ -135,18 +191,16 @@ class Table:
         ty = nx
 
         # Projection des vitesses sur les axes normal et tangentiel
-        v1n = b1.vitesse_x * nx + b1.vitesse_y * ny     # vitesse de b1 selon la normale
-        v1t = b1.vitesse_x * tx + b1.vitesse_y * ty     # vitesse de b1 selon la tangente
+        v1n = b1.vitesse_x * nx + b1.vitesse_y * ny
+        v1t = b1.vitesse_x * tx + b1.vitesse_y * ty
         v2n = b2.vitesse_x * nx + b2.vitesse_y * ny
         v2t = b2.vitesse_x * tx + b2.vitesse_y * ty
 
         # Si les billes s'éloignent déjà, on ne fait rien
-        # (évite les collisions multiples qui bloqueraient les billes)
         if v1n - v2n <= 0:
             return
 
         # Échange des vitesses normales (collision élastique masses égales)
-        # Les vitesses tangentielles restent inchangées
         nouvelle_v1n = v2n
         nouvelle_v2n = v1n
 
@@ -170,10 +224,9 @@ class Table:
 
     #___Vérification d'arrêt complet___
     def est_arretee(self) -> bool:
-        # Renvoie True si plus aucune bille (non empochée) ne bouge
         return all(not b.est_en_mouvement()
                    for b in self.billes if not b.empochee)
 
     #___Accesseur de la bille blanche___
     def get_bille_blanche(self) -> BilleBlanche:
-        return self.billes[0]       # la blanche est toujours à l'index 0
+        return self.billes[0]
