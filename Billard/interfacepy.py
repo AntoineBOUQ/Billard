@@ -15,6 +15,16 @@ class FenetreDebut(QMainWindow):
         super().__init__()
         # Charge l'interface graphique dessinée dans Qt Designer
         uic.loadUi("interface.ui", self)
+        # Fond vert pour la page d'accueil
+        self.page_5.setStyleSheet("""
+            background-color: qlineargradient(
+                x1:0, y1:0, x2:1, y2:1,
+                stop:0 #1a6b1a,
+                stop:0.5 #228b22,
+                stop:1 #1a6b1a
+            );
+        """)
+
 
         # ── Connexions des boutons aux méthodes correspondantes ──
         self.Boutton_Quitter.clicked.connect(self.close)
@@ -25,6 +35,32 @@ class FenetreDebut(QMainWindow):
         self.Boutton_Suivant.clicked.connect(self.Fenetrejeu2)
         self.Boutton_Suivant.clicked.connect(self.Changer_label)
         self.Boutton_Jouer_Coup.clicked.connect(self.jouer_coup)
+        # styliser les boutons :
+        self.page_5.setStyleSheet("""
+            QWidget {
+                background-color: #1f7a1f;
+            }
+            QPushButton {
+                background-color: #6b0000;
+                color: #d4d4d4;
+                border: 2px solid #5a0000;
+                border-radius: 15px;
+                padding: 6px;
+                font-size: 14px;
+                min-width: 200px;
+                max-width: 200px;
+                
+            }
+            QPushButton:hover {
+                background-color: #7a0000;
+                color: #e0e0e0;
+            }
+             #Boutton_Quitter {
+                margin-left: 600px;
+                margin-right: 600px;
+            }
+        """)
+
         self.jeu = None                             # le Jeu sera créé au lancement de la partie
         self.timer = QTimer(self)                   # timer pour animer les billes
         self.timer.timeout.connect(self._frame_animation)
