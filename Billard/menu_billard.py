@@ -1,7 +1,7 @@
 # menu_billard.py
 from PyQt6.QtWidgets import QWidget
-from PyQt6.QtGui import QPainter, QColor, QRadialGradient, QPen, QFont
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QPainter, QColor, QRadialGradient, QPen, QFont, QLinearGradient
 
 # (numéro, couleur, rayé, texte_affiché)
 # Disposition réglementaire 8-ball
@@ -53,10 +53,15 @@ class BilleBouton(QWidget):
         self.survol = False
         self.setFixedSize(rayon * 2, rayon * 2)
         self.setMouseTracking(True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+
+
         cx, cy = self.rayon, self.rayon
         r = self.rayon - 2
 
@@ -190,5 +195,86 @@ class MenuBillard(QWidget):
             self.signal_score.emit()
 
     def paintEvent(self, event):
+
         painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor(31, 122, 31))
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        gradient = QLinearGradient(0, 0, self.width(), self.height())
+        gradient.setColorAt(0.0, QColor("#0f3d0f"))
+        gradient.setColorAt(0.3, QColor("#1a6b1a"))
+        gradient.setColorAt(0.5, QColor("#145214"))
+        gradient.setColorAt(0.7, QColor("#1a6b1a"))
+        gradient.setColorAt(1.0, QColor("#0f3d0f"))
+        painter.fillRect(self.rect(), gradient)
+
+class BilleSuivant(QWidget):
+    """Bille cliquable pour le bouton Suivant."""
+    clicked = pyqtSignal()
+
+    def __init__(self, rayon=60, parent=None):
+        super().__init__(parent)
+        self.rayon = rayon
+        self.survol = False
+        self.setFixedSize(rayon * 2, rayon * 2)
+        self.setMouseTracking(True)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        cx, cy = self.rayon, self.rayon
+        r = self.rayon - 2
+
+        # Corps rouge foncé
+        painter.setBrush(QColor("#6b0000"))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(cx - r, cy - r, r * 2, r * 2)
+
+        # Reflet lumineux
+        gradient = QRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.6)
+        gradient.setColorAt(0, QColor(255, 255, 255, 130))
+        gradient.setColorAt(1, QColor(255, 255, 255, 0))
+        painter.setBrush(gradient)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(cx - r, cy - r, r * 2, r * 2)
+
+        # Voile sombre si pas survol
+        if not self.survol:
+            painter.setBrush(QColor(0, 0, 0, 60))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(cx - r, cy - r, r * 2, r * 2)
+
+        # Cercle blanc central
+        nr = int(r * 0.50)
+        painter.setBrush(QColor(255, 255, 255, 220))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(cx - nr, cy - nr, nr * 2, nr * 2)
+
+        # Texte "Suivant"
+        painter.setPen(QColor(0, 0, 0))
+        taille = max(6, int(nr * 0.9 / max(1, len("Suivant") * 0.4)))
+        font = QFont("Arial", taille, QFont.Weight.Bold)
+        painter.setFont(font)
+        painter.drawText(
+            cx - nr, cy - nr, nr * 2, nr * 2,
+            Qt.AlignmentFlag.AlignCenter,
+            "Suivant"
+        )
+
+        # Contour
+        pen = QPen(QColor(255, 255, 255, 200), 2.5) if self.survol \
+              else QPen(QColor(80, 80, 80), 1.5)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawEllipse(cx - r, cy - r, r * 2, r * 2)
+
+    def enterEvent(self, event):
+        self.survol = True
+        self.update()
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def leaveEvent(self, event):
+        self.survol = False
+        self.update()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
