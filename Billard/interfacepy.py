@@ -25,7 +25,6 @@ class FenetreDebut(QMainWindow):
         self.Boutton_Retour_regle.clicked.connect(self.Fenetredebut)
         self.Boutton_Suivant.clicked.connect(self.Fenetrejeu2)
         self.Boutton_Suivant.clicked.connect(self.Changer_label)
-        self.Boutton_Jouer_Coup.clicked.connect(self.jouer_coup)
 
         # Jeu et timer
         self.jeu = None
@@ -96,29 +95,21 @@ class FenetreDebut(QMainWindow):
         joueur = self.jeu.joueur_actuel()
         self.Label_jeu.setText(f"Au tour de {joueur.nom}")
 
-    #___Coup déclenché par le bouton "Jouer Coup"___
-    def jouer_coup(self):
-        if self.jeu is None:
-            return
-        if self.timer.isActive():
-            return
-
-        force = self.slider_Force.value() / 100.0
-        angle = math.radians(self.slider_Angle.value())
-        self.jeu.jouer_coup(angle, force)
-        self.timer.start(16)
-
     #___Coup déclenché par clic sur la table___
     def _coup_par_clic(self, angle_rad):
-        """Slot appelé quand le joueur clique sur la table."""
         if self.timer.isActive():
             return
 
         force = self.slider_Force.value() / 100.0
+        if force <= 0:  # sécurité : pas de coup si force nulle
+            return
+
         self.jeu.jouer_coup(angle_rad, force)
+
         self.tableBillard.visee_active = False
         self.tableBillard.curseur_x = None
         self.tableBillard.update()
+
         self.timer.start(16)
 
     #___Une frame d'animation, appelée 60 fois par seconde___

@@ -57,37 +57,47 @@ class Table:
             ((W, H - b), (W - b, H)),      # bas-droit
         ]
 
-    #___Création des billes___
+    # ___Création des billes___
     def _initialiser_billes(self):
         # La blanche est placée à gauche, sur la ligne de service
         self.billes.append(BilleBlanche(200, 250))
 
         couleurs = [
-            "jaune", "bleu", "rouge", "violet", "orange",
-            "vert", "marron", "noir",
-            "jaune_rayé", "bleu_rayé", "rouge_rayé", "violet_rayé",
-            "orange_rayé", "vert_rayé", "marron_rayé"
-        ]
+                "jaune", "bleu", "rouge", "violet", "orange",
+                "vert", "marron", "noir",
+                "jaune_rayé", "bleu_rayé", "rouge_rayé", "violet_rayé",
+                "orange_rayé", "vert_rayé", "marron_rayé"
+            ]
 
-        # Calcul du triangle de billes côté droit
+
         positions = self._calculer_positions_triangle(600, 250)
-        for i, (x, y) in enumerate(positions):
-            self.billes.append(BilleNumerotee(x, y, i + 1, couleurs[i]))
+        ordre = [1, 2, 9, 10, 8, 3, 4, 11, 5, 12, 15,7 , 14, 13, 6]
+
+
+        for numero in range(1, 16):
+            p = ordre.index(numero)  # où va cette bille dans le triangle
+            x, y = positions[p]
+            self.billes.append(BilleNumerotee(x, y, numero, couleurs[numero - 1]))
 
     #___Calcul des positions du triangle de départ___
-    def _calculer_positions_triangle(self, x_depart: float, y_centre: float):
+    def _calculer_positions_triangle(self, x_pointe: float, y_centre: float):
         positions = []
-        espacement = 21         # distance entre centres de billes
-        rangees = [1, 2, 3, 4, 5]   # 1 bille en rang 0, 2 en rang 1, etc.
+        rayon = 12.0
+        ecart = 2 * rayon + 1.0  # diamètre + 1 px de jeu (anti-chevauchement)
+        esp_vertical = ecart  # billes qui se touchent dans une rangée
+        esp_horizontal = ecart * (3 ** 0.5) / 2  # distance entre rangées = écart × cos(30°)
 
+        rangees = [1, 2, 3, 4, 5]  # 1 bille à la pointe, puis 2, 3, 4, 5
         for rang, nb in enumerate(rangees):
-            x = x_depart + rang * espacement
+            x = x_pointe + rang * esp_horizontal
             # Centre verticalement la rangée
-            y_debut = y_centre - (nb - 1) * espacement / 2
+            y_debut = y_centre - (nb - 1) * esp_vertical / 2
             for i in range(nb):
-                positions.append((x, y_debut + i * espacement))
+                positions.append((x, y_debut + i * esp_vertical))
 
         return positions
+
+
 
     #___Mise à jour physique d'une frame___
     def deplacer_toutes_billes(self):
