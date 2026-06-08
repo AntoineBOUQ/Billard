@@ -3,8 +3,8 @@ import math
 from PyQt6 import uic
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QMessageBox,
                              QHBoxLayout, QVBoxLayout, QTextEdit, QWidget)
-from PyQt6.QtCore import QTimer
-from menu_billard import MenuBillard
+from PyQt6.QtCore import QTimer, Qt
+from menu_billard import MenuBillard, BilleSuivant
 from panneau_joueurs import PanneauJoueurs
 from Jeu import Jeu
 
@@ -21,6 +21,93 @@ class FenetreDebut(QMainWindow):
         self.Boutton_score.hide()
         self.Boutton_regle.hide()
         self.Boutton_Quitter.hide()
+        # ── Stylesheet page_7 ──
+        self.page_7.setStyleSheet("""
+                   #page_7 {
+                       background: qlineargradient(
+                           x1:0, y1:0, x2:1, y2:1,
+                           stop:0 #0f3d0f,
+                           stop:0.3 #1a6b1a,
+                           stop:0.5 #145214,
+                           stop:0.7 #1a6b1a,
+                           stop:1 #0f3d0f
+                       );
+                   }
+                   QLabel {
+                       background-color: transparent;
+                       color: white;
+                       font-size: 22px;
+                   }
+                   QLineEdit {
+                       background-color: #2d2d2d;
+                       color: white;
+                       border: 2px solid #5a0000;
+                       border-radius: 8px;
+                       padding: 6px;
+                       font-size: 18px;
+                   }
+                   QLineEdit:focus {
+                       border: 2px solid #8b0000;
+                   }
+               """)
+        # style de la page de règles
+        self.page_6.setStyleSheet("""
+                   #page_6 {
+                       background: qlineargradient(
+                           x1:0, y1:0, x2:1, y2:1,
+                           stop:0 #0f3d0f,
+                           stop:0.3 #1a6b1a,
+                           stop:0.5 #145214,
+                           stop:0.7 #1a6b1a,
+                           stop:1 #0f3d0f
+                       );
+                   }
+                   QLabel {
+                       background-color: transparent;
+                       color: white;
+                       font-size: 18px;
+                   }
+                   QPushButton {
+                       background-color: #6b0000;
+                       color: #d4d4d4;
+                       border: 2px solid #5a0000;
+                       border-radius: 8px;
+                       padding: 6px;
+                       font-size: 14px;
+                       min-width: 150px;
+                       max-width: 150px;
+                   }
+                   QPushButton:hover {
+                       background-color: #7a0000;
+                       color: #e0e0e0;
+                   }
+               """)
+
+        # Centre le titre et réduit marges
+        self.label_3.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label_2.setContentsMargins(0, 0, 0, 0)
+        self.label.setContentsMargins(0, 0, 0, 0)
+        self.Edit_J1.setContentsMargins(0, 0, 0, 0)
+        self.Edit_J2.setContentsMargins(0, 0, 0, 0)
+
+        # Fixe la hauteur des labels pour les coller aux champs
+        self.label_2.setFixedHeight(28)
+        self.label.setFixedHeight(28)
+
+        # Réduit l'espacement dans le layout de page_7
+        layout = self.page_7.layout()
+        if layout:
+            layout.setSpacing(0)
+            layout.setContentsMargins(200, 50, 200, 50)
+
+        # ── Bille Suivant — parent = fenêtre principale ──
+        self.Boutton_Suivant.hide()
+        rayon = min(self.screen().availableGeometry().width(),
+                    self.screen().availableGeometry().height()) // 14
+        self.bille_suivant = BilleSuivant(rayon, self)  # parent = self
+        self.bille_suivant.hide()  # cachée au départ
+        self.bille_suivant.clicked.connect(self.Fenetrejeu2)
+        self.bille_suivant.clicked.connect(self.Changer_label)
 
         # ── Connexions des boutons des autres pages ──
         self.pages.setCurrentIndex(0)
@@ -52,6 +139,7 @@ class FenetreDebut(QMainWindow):
         self.showMaximized()
         # Délai pour laisser le temps à showMaximized de s'appliquer
         QTimer.singleShot(100, self._ajuster_menu)
+        QTimer.singleShot(200, self._ajuster_page7)
 
     def _ajuster_menu(self):
         """Ajuste le menu après que la fenêtre soit en plein écran."""
@@ -187,19 +275,42 @@ class FenetreDebut(QMainWindow):
         ligne.addWidget(self.panneau, 0)            # panneau à largeur fixe, à droite
         layout_v.insertLayout(idx, ligne)
 
+    def _ajuster_page7(self):
+        """Centre la bille Suivant sur la fenêtre principale."""
+        w = self.width()
+        h = self.height()
+        rayon = self.bille_suivant.rayon
+        x = (w - rayon * 2) // 2
+        y = int(h * 0.65)
+        self.bille_suivant.move(x, y)
+        # On ne l'affiche que si on est sur la page de saisie
+        if self.pages.currentIndex() == 2:
+            self.bille_suivant.show()
+
     # ───── Navigation entre pages ─────
     def Fenetreregle(self):
         self.pages.setCurrentIndex(1)
+        self.bille_suivant.hide()
 
     def Fenetredebut(self):
         self.pages.setCurrentIndex(0)
+        self.bille_suivant.hide()
 
     def Fenetrejeu1(self):
         self.pages.setCurrentIndex(2)
+        # Repositionne et affiche la bille
+        w = self.width()
+        h = self.height()
+        rayon = self.bille_suivant.rayon
+        self.bille_suivant.move((w - rayon * 2) // 2, int(h * 0.65))
+        self.bille_suivant.show()
+        self.bille_suivant.raise_()  # passe au premier plan
 
     def Fenetrejeu2(self):
         self.pages.setCurrentIndex(3)
+        self.bille_suivant.hide()
         self._lancer_partie()
+
 
     #___Mise à jour du label "Match de X contre Y"___
     def Changer_label(self):
