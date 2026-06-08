@@ -27,6 +27,14 @@ class Table:
         self._initialiser_billes()      # crée les 16 billes
         self.nb_bille_rentre = 0        # compteur de billes numérotées empochées
 
+        # Suivi des billes empochées pendant le COUP en cours
+        self.empochees_ce_coup = []         # numéros, dans l'ordre de chute
+        self.blanche_empochee_ce_coup = False  # True si la blanche est tombée ce coup
+        # Numéro de la PREMIÈRE bille touchée par la blanche ce coup (None = aucune)
+        self.premiere_bille_touchee = None
+        # Identités des billes ayant touché une bande ce coup ("blanche" ou numéro)
+        self.billes_ayant_touche_bande = set()
+
     #___Position des 6 poches (x, y, rayon d'empochage)___
     def _calculer_trous(self):
         W, H, b = self.largeur, self.hauteur, self.BISEAU
@@ -99,15 +107,51 @@ class Table:
 
 
 
-    #___Mise à jour physique d'une frame___
+    #___Réinitialisation du suivi avant un nouveau coup___
+    def nouveau_coup(self):
+        """À appeler juste avant un coup : remet à zéro le suivi des empochages."""
+        self.empochees_ce_coup = []
+        self.blanche_empochee_ce_coup = False
+        self.premiere_bille_touchee = None
+        self.billes_ayant_touche_bande = set()
+
+    #___Mise à jour physique d'une frame (en sous-pas anti-tunneling)___
     def deplacer_toutes_billes(self):
-        """Déplace toutes les billes selon leur vitesse."""
+        """Déplace toutes les billes en plusieurs sous-pas pour éviter qu'une
+        bille rapide ne traverse une bande. Le frottement n'est appliqué
+        qu'une seule fois par frame, donc la vitesse de jeu est inchangée."""
+        # Vitesse maximale et plus petit rayon du moment
+        vmax = 0.0
+        rayon_min = None
         for bille in self.billes:
-            if not bille.empochee:                  # on ignore les billes déjà sorties
-                bille.deplacer()                    # mouvement et frottement
-                self._verifier_trou(bille)          # 1. empochage (PRIORITAIRE)
-                if not bille.empochee:
-                    self._rebondir_sur_bandes(bille)  # 2. rebonds (bords + biseaux)
+            if bille.empochee:
+                continue
+            v = (bille.vitesse_x ** 2 + bille.vitesse_y ** 2) ** 0.5
+            if v > vmax:
+                vmax = v
+            if rayon_min is None or bille.rayon < rayon_min:
+                rayon_min = bille.rayon
+        if rayon_min is None:
+            rayon_min = 12.0
+
+        # Chaque sous-pas déplace au plus la moitié d'un rayon → pas de saut
+        pas_max = 0.5 * rayon_min
+        nb_pas = max(1, int(vmax / pas_max) + 1)
+        fraction = 1.0 / nb_pas
+
+        for _ in range(nb_pas):
+            for bille in self.billes:
+                if not bille.empochee:                  # on ignore les billes sorties
+                    bille.avancer(fraction)             # déplacement partiel (sans frottement)
+                    self._verifier_trou(bille)          # 1. empochage (PRIORITAIRE)
+                    if not bille.empochee:
+                        self._rebondir_sur_bandes(bille)  # 2. rebonds (bords + biseaux)
+            self.detecter_collisions()                  # 3. chocs entre billes à chaque sous-pas
+
+        # 4. Frottement : une seule fois par frame
+        for bille in self.billes:
+            if not bille.empochee:
+                bille.appliquer_frottement()
 
     #___Accesseur du compteur___
     def _nb_bille_rentre(self):
@@ -144,6 +188,9 @@ class Table:
 
         # Collision si la bille touche la bande
         if 0 < distance < bille.rayon:
+            # Mémorise le contact avec une bande (règle "noire en bande")
+            self._noter_bande(bille)
+
             # Normale unitaire (du point de contact vers le centre de la bille)
             nx = ecart_x / distance
             ny = ecart_y / distance
@@ -168,9 +215,12 @@ class Table:
                 bille.empochee = True
                 bille.vitesse_x = 0.0
                 bille.vitesse_y = 0.0
-                # Seules les billes numérotées comptent dans le compteur
-                if not isinstance(bille, BilleBlanche):
+                # On note ce qui tombe pour que Jeu applique les règles
+                if isinstance(bille, BilleBlanche):
+                    self.blanche_empochee_ce_coup = True
+                else:
                     self.nb_bille_rentre += 1
+                    self.empochees_ce_coup.append(bille.numero)
                 return
 
     #___Détection de toutes les collisions entre billes___
@@ -182,6 +232,30 @@ class Table:
                 if not b1.empochee and not b2.empochee:
                     self._resoudre_collision(b1, b2)
 
+    #___Mémorise la première bille touchée par la blanche ce coup___
+    def _noter_contact_blanche(self, b1, b2):
+        if self.premiere_bille_touchee is not None:
+            return                          # déjà enregistré pour ce coup
+        autre = None
+        if isinstance(b1, BilleBlanche):
+            autre = b2
+        elif isinstance(b2, BilleBlanche):
+            autre = b1
+        if autre is not None and hasattr(autre, "numero"):
+            self.premiere_bille_touchee = autre.numero
+
+    #___Mémorise qu'une bille a touché une bande ce coup___
+    def _noter_bande(self, bille):
+        if isinstance(bille, BilleBlanche):
+            self.billes_ayant_touche_bande.add("blanche")
+        elif hasattr(bille, "numero"):
+            self.billes_ayant_touche_bande.add(bille.numero)
+
+    #___La noire (n°8) ou la blanche a-t-elle touché une bande ce coup ?___
+    def noire_ou_blanche_en_bande(self) -> bool:
+        return (8 in self.billes_ayant_touche_bande
+                or "blanche" in self.billes_ayant_touche_bande)
+
     #___Résolution d'une collision entre deux billes___
     def _resoudre_collision(self, b1: Bille, b2: Bille):
         # Vecteur de b1 vers b2
@@ -191,6 +265,9 @@ class Table:
 
         if distance >= b1.rayon + b2.rayon or distance == 0:
             return
+
+        # Mémorise la 1re bille que la blanche vient toucher (pour les fautes)
+        self._noter_contact_blanche(b1, b2)
 
         # Vecteur normal (de b1 vers b2, normalisé)
         nx = dx / distance

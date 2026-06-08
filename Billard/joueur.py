@@ -1,4 +1,3 @@
-
 from queue import Queue
 
 
@@ -9,6 +8,7 @@ class Joueur:
         self.nom = nom                  # nom affiché à l'écran
         self.score = 0                  # nombre de billes empochées
         self.queue = Queue()            # chaque joueur a sa queue
+        self.groupe = None              # "pleines", "rayées" ou None tant que non attribué
         self.billes_a_empocher = []     # liste des billes assignées (pleines ou rayées)
         self.nb_coups = 0               # nombre de coups joués par ce joueur
 
@@ -24,5 +24,8 @@ class Joueur:
 
     #___Vérifie si le joueur a empoché toutes ses billes___
     def a_gagne(self) -> bool:
+        # Tant qu'aucun groupe n'est attribué, le joueur ne peut pas avoir gagné
+        if self.groupe is None or not self.billes_a_empocher:
+            return False
         # Renvoie True si toutes les billes assignées au joueur sont empochées
         return all(b.empochee for b in self.billes_a_empocher)
