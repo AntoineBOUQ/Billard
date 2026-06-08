@@ -278,3 +278,86 @@ class BilleSuivant(QWidget):
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
+
+class SliderForce(QWidget):
+    """
+    Barre de force personnalisée avec dégradé vert → rouge.
+    """
+    valueChanged = pyqtSignal(int)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._valeur = 50
+        self.setMinimumHeight(30)
+        self.setMouseTracking(True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def value(self):
+        return self._valeur
+
+    def setValue(self, val):
+        self._valeur = max(0, min(100, val))
+        self.update()
+        self.valueChanged.emit(self._valeur)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        w, h = self.width(), self.height()
+        marge = 10
+        rayon = h // 2 - 2
+
+        # Fond sombre
+        painter.setBrush(QColor(30, 30, 30))
+        painter.setPen(QPen(QColor(80, 80, 80), 1))
+        painter.drawRoundedRect(marge, h // 2 - 6, w - 2 * marge, 12, 6, 6)
+
+        # Dégradé vert → rouge
+        largeur_remplie = int((w - 2 * marge) * self._valeur / 100)
+        if largeur_remplie > 0:
+            gradient = QLinearGradient(marge, 0, w - marge, 0)
+            gradient.setColorAt(0.0, QColor("#00cc00"))
+            gradient.setColorAt(0.3, QColor("#aacc00"))
+            gradient.setColorAt(0.5, QColor("#ffcc00"))
+            gradient.setColorAt(0.7, QColor("#ff7700"))
+            gradient.setColorAt(1.0, QColor("#cc0000"))
+            painter.setBrush(gradient)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(marge, h // 2 - 6,
+                                    largeur_remplie, 12, 6, 6)
+
+        # Curseur rond
+        x_curseur = marge + int((w - 2 * marge) * self._valeur / 100)
+        x_curseur = max(marge + rayon, min(w - marge - rayon, x_curseur))
+        if self._valeur < 33:
+            couleur = QColor("#00cc00")
+        elif self._valeur < 66:
+            couleur = QColor("#ffcc00")
+        else:
+            couleur = QColor("#cc0000")
+        painter.setBrush(couleur)
+        painter.setPen(QPen(QColor(255, 255, 255, 180), 2))
+        painter.drawEllipse(x_curseur - rayon, h // 2 - rayon,
+                            rayon * 2, rayon * 2)
+
+        # Pourcentage
+        painter.setPen(QColor(255, 255, 255))
+        font = QFont("Arial", 9, QFont.Weight.Bold)
+        painter.setFont(font)
+        painter.drawText(0, 0, w, h,
+                         Qt.AlignmentFlag.AlignCenter,
+                         f"{self._valeur}%")
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._mettre_a_jour_valeur(event.position().x())
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.MouseButton.LeftButton:
+            self._mettre_a_jour_valeur(event.position().x())
+
+    def _mettre_a_jour_valeur(self, x):
+        marge = 10
+        largeur = self.width() - 2 * marge
+        val = int((x - marge) / largeur * 100)
+        self.setValue(val)

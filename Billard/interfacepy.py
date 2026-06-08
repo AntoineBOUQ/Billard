@@ -4,9 +4,9 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QMessageBox,
                              QHBoxLayout, QVBoxLayout, QTextEdit, QWidget)
 from PyQt6.QtCore import QTimer, Qt
-from menu_billard import MenuBillard, BilleSuivant
 from panneau_joueurs import PanneauJoueurs
-from Jeu import Jeu
+from jeu import Jeu
+from menu_billard import MenuBillard, BilleSuivant, SliderForce
 
 
 class FenetreDebut(QMainWindow):
@@ -21,67 +21,69 @@ class FenetreDebut(QMainWindow):
         self.Boutton_score.hide()
         self.Boutton_regle.hide()
         self.Boutton_Quitter.hide()
+
         # ── Stylesheet page_7 ──
         self.page_7.setStyleSheet("""
-                   #page_7 {
-                       background: qlineargradient(
-                           x1:0, y1:0, x2:1, y2:1,
-                           stop:0 #0f3d0f,
-                           stop:0.3 #1a6b1a,
-                           stop:0.5 #145214,
-                           stop:0.7 #1a6b1a,
-                           stop:1 #0f3d0f
-                       );
-                   }
-                   QLabel {
-                       background-color: transparent;
-                       color: white;
-                       font-size: 22px;
-                   }
-                   QLineEdit {
-                       background-color: #2d2d2d;
-                       color: white;
-                       border: 2px solid #5a0000;
-                       border-radius: 8px;
-                       padding: 6px;
-                       font-size: 18px;
-                   }
-                   QLineEdit:focus {
-                       border: 2px solid #8b0000;
-                   }
-               """)
+            #page_7 {
+                background: qlineargradient(
+                    x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #0f3d0f,
+                    stop:0.3 #1a6b1a,
+                    stop:0.5 #145214,
+                    stop:0.7 #1a6b1a,
+                    stop:1 #0f3d0f
+                );
+            }
+            QLabel {
+                background-color: transparent;
+                color: white;
+                font-size: 22px;
+            }
+            QLineEdit {
+                background-color: #2d2d2d;
+                color: white;
+                border: 2px solid #5a0000;
+                border-radius: 8px;
+                padding: 6px;
+                font-size: 18px;
+            }
+            QLineEdit:focus {
+                border: 2px solid #8b0000;
+            }
+        """)
+
         # style de la page de règles
         self.page_6.setStyleSheet("""
-                   #page_6 {
-                       background: qlineargradient(
-                           x1:0, y1:0, x2:1, y2:1,
-                           stop:0 #0f3d0f,
-                           stop:0.3 #1a6b1a,
-                           stop:0.5 #145214,
-                           stop:0.7 #1a6b1a,
-                           stop:1 #0f3d0f
-                       );
-                   }
-                   QLabel {
-                       background-color: transparent;
-                       color: white;
-                       font-size: 18px;
-                   }
-                   QPushButton {
-                       background-color: #6b0000;
-                       color: #d4d4d4;
-                       border: 2px solid #5a0000;
-                       border-radius: 8px;
-                       padding: 6px;
-                       font-size: 14px;
-                       min-width: 150px;
-                       max-width: 150px;
-                   }
-                   QPushButton:hover {
-                       background-color: #7a0000;
-                       color: #e0e0e0;
-                   }
-               """)
+            #page_6 {
+                background: qlineargradient(
+                    x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #0f3d0f,
+                    stop:0.3 #1a6b1a,
+                    stop:0.5 #145214,
+                    stop:0.7 #1a6b1a,
+                    stop:1 #0f3d0f
+                );
+            }
+            QLabel {
+                background-color: transparent;
+                color: white;
+                font-size: 18px;
+            }
+            QPushButton {
+                background-color: #6b0000;
+                color: #d4d4d4;
+                border: 2px solid #5a0000;
+                border-radius: 8px;
+                padding: 6px;
+                font-size: 14px;
+                min-width: 150px;
+                max-width: 150px;
+            }
+            QPushButton:hover {
+                background-color: #7a0000;
+                color: #e0e0e0;
+            }
+        """)
 
         # Centre le titre et réduit marges
         self.label_3.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -89,23 +91,20 @@ class FenetreDebut(QMainWindow):
         self.label.setContentsMargins(0, 0, 0, 0)
         self.Edit_J1.setContentsMargins(0, 0, 0, 0)
         self.Edit_J2.setContentsMargins(0, 0, 0, 0)
-
-        # Fixe la hauteur des labels pour les coller aux champs
         self.label_2.setFixedHeight(28)
         self.label.setFixedHeight(28)
 
-        # Réduit l'espacement dans le layout de page_7
         layout = self.page_7.layout()
         if layout:
             layout.setSpacing(0)
             layout.setContentsMargins(200, 50, 200, 50)
 
-        # ── Bille Suivant — parent = fenêtre principale ──
+        # ── Bille Suivant ──
         self.Boutton_Suivant.hide()
         rayon = min(self.screen().availableGeometry().width(),
                     self.screen().availableGeometry().height()) // 14
-        self.bille_suivant = BilleSuivant(rayon, self)  # parent = self
-        self.bille_suivant.hide()  # cachée au départ
+        self.bille_suivant = BilleSuivant(rayon, self)
+        self.bille_suivant.hide()
         self.bille_suivant.clicked.connect(self.Fenetrejeu2)
         self.bille_suivant.clicked.connect(self.Changer_label)
 
@@ -120,7 +119,7 @@ class FenetreDebut(QMainWindow):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._frame_animation)
 
-        # ── Panneau latéral des joueurs (à droite de la table) ──
+        # ── Panneau latéral des joueurs ──
         self.panneau = None
         self._installer_panneau_joueurs()
 
@@ -134,45 +133,64 @@ class FenetreDebut(QMainWindow):
         self.menu_billard.signal_regles.connect(self.Fenetreregle)
         self.menu_billard.signal_score.connect(lambda: print("Score à venir"))
 
+        # ── Slider force personnalisé ──
+        self.slider_force_custom = SliderForce()
+
+        self.horizontalLayout_9.replaceWidget(
+            self.slider_Force,
+            self.slider_force_custom
+        )
+
+        self.slider_Force.hide()
+        self.slider_force_custom.setValue(50)
+
     def showEvent(self, event):
         super().showEvent(event)
         self.showMaximized()
-        # Délai pour laisser le temps à showMaximized de s'appliquer
         QTimer.singleShot(100, self._ajuster_menu)
         QTimer.singleShot(200, self._ajuster_page7)
 
+
     def _ajuster_menu(self):
-        """Ajuste le menu après que la fenêtre soit en plein écran."""
-        # Force le QStackedWidget et page_5 à prendre toute la place
         self.pages.setGeometry(self.centralWidget().rect())
         self.page_5.setGeometry(self.pages.rect())
         self.menu_billard.setGeometry(self.page_5.rect())
-
         self.page_5.resizeEvent = lambda e: (
             self.pages.setGeometry(self.centralWidget().rect()),
             self.page_5.setGeometry(self.pages.rect()),
             self.menu_billard.setGeometry(self.page_5.rect())
         )
-    #___Remplit la page des règles avec une zone de texte défilable___
+
+    def _ajuster_page7(self):
+        w = self.width()
+        h = self.height()
+        rayon = self.bille_suivant.rayon
+        x = (w - rayon * 2) // 2
+        y = int(h * 0.65)
+        self.bille_suivant.move(x, y)
+        if self.pages.currentIndex() == 2:
+            self.bille_suivant.show()
+
+
+
+    #___Remplit la page des règles___
     def _remplir_page_regles(self):
         page = self.page_6
         bouton = self.Boutton_Retour_regle
-        bouton.setParent(None)                      # détache le bouton de l'ancien layout
+        bouton.setParent(None)
         ancien = page.layout()
         if ancien is not None:
-            QWidget().setLayout(ancien)             # widget jetable : libère l'ancien layout
+            QWidget().setLayout(ancien)
 
         col = QVBoxLayout(page)
         col.setContentsMargins(20, 16, 20, 16)
         col.setSpacing(12)
 
-        # Barre du haut : bouton Retour à gauche
         barre = QHBoxLayout()
         barre.addWidget(bouton)
         barre.addStretch(1)
         col.addLayout(barre)
 
-        # Zone de texte défilable contenant les règles
         texte = QTextEdit(page)
         texte.setReadOnly(True)
         texte.setStyleSheet(
@@ -210,8 +228,7 @@ class FenetreDebut(QMainWindow):
         <ul>
           <li>Au début, aucun joueur n'a de groupe : la table est «&nbsp;ouverte&nbsp;».</li>
           <li>Le groupe est attribué au premier joueur qui empoche une bille
-              <b>sans faute</b> : la première bille rentrée détermine son groupe,
-              et l'adversaire hérite de l'autre.</li>
+              <b>sans faute</b>.</li>
         </ul>
 
         <h2 style="color:#e0653c;">Les fautes</h2>
@@ -221,43 +238,19 @@ class FenetreDebut(QMainWindow):
           <li>Ne toucher <b>aucune</b> bille avec la blanche.</li>
           <li>Toucher en premier une bille du <b>groupe adverse</b>.</li>
           <li>Empocher une bille du <b>groupe adverse</b>.</li>
-          <li>Toucher la noire en premier (ou l'empocher) <b>avant</b> d'avoir
-              fini son groupe.</li>
+          <li>Toucher la noire en premier avant d'avoir fini son groupe.</li>
         </ul>
 
-        <h2 style="color:#7ecb7e;">La règle des deux coups</h2>
+        <h2 style="color:#7ecb7e;">Gagner la partie : la noire</h2>
         <ul>
-          <li>Après une faute de l'adversaire, le joueur dispose de deux coups.</li>
-          <li>Le deuxième coup n'est accordé que si le premier n'est
-              <b>pas lui-même une faute</b>.</li>
-          <li>Empocher une de ses billes pendant ces deux coups fait simplement
-              poursuivre le jeu normalement.</li>
-        </ul>
-
-        <h2 style="color:#7ecb7e;">La bille en main</h2>
-        <ul>
-          <li>Quand la blanche est empochée, l'adversaire la <b>replace</b>
-              lui-même le long de la ligne de service.</li>
-          <li>Depuis cette position, il ne peut jouer que <b>vers l'avant</b>
-              (vers le reste de la table).</li>
-        </ul>
-
-        <h2 style="color:#ffe03c;">Gagner la partie : la noire</h2>
-        <ul>
-          <li>Empocher la noire <b>dès le tout premier coup</b> de la partie :
-              victoire immédiate.</li>
-          <li>Empocher la noire <b>avant</b> d'avoir rentré toutes ses billes :
+          <li>Empocher la noire dès le tout premier coup : victoire immédiate.</li>
+          <li>Empocher la noire avant d'avoir rentré toutes ses billes :
               défaite immédiate.</li>
-          <li>Une fois son groupe terminé, on vise la noire ; il faut l'empocher
-              sans faute pour gagner.</li>
-          <li><b>Cas particulier :</b> lorsque les <b>deux</b> joueurs ont fini
-              leur groupe, la noire doit être empochée sans faute <b>et en
-              bande</b> — la noire ou la blanche doit toucher au moins une bande
-              pendant le coup. Sinon, la partie est perdue.</li>
+          <li>Une fois son groupe terminé, on vise la noire pour gagner.</li>
         </ul>
         """
 
-    #___Insère le panneau des joueurs à droite de la table (page de jeu)___
+    #___Insère le panneau des joueurs à droite de la table___
     def _installer_panneau_joueurs(self):
         layout_v = self.page_8.layout()
         if layout_v is None:
@@ -265,29 +258,16 @@ class FenetreDebut(QMainWindow):
         idx = layout_v.indexOf(self.tableBillard)
         if idx == -1:
             return
-        # On retire la table du layout vertical pour la replacer dans une ligne
         layout_v.takeAt(idx)
         ligne = QHBoxLayout()
         ligne.setContentsMargins(0, 0, 0, 0)
         ligne.setSpacing(8)
-        ligne.addWidget(self.tableBillard, 1)       # la table prend l'espace restant
+        ligne.addWidget(self.tableBillard, 1)
         self.panneau = PanneauJoueurs(self.page_8)
-        ligne.addWidget(self.panneau, 0)            # panneau à largeur fixe, à droite
+        ligne.addWidget(self.panneau, 0)
         layout_v.insertLayout(idx, ligne)
 
-    def _ajuster_page7(self):
-        """Centre la bille Suivant sur la fenêtre principale."""
-        w = self.width()
-        h = self.height()
-        rayon = self.bille_suivant.rayon
-        x = (w - rayon * 2) // 2
-        y = int(h * 0.65)
-        self.bille_suivant.move(x, y)
-        # On ne l'affiche que si on est sur la page de saisie
-        if self.pages.currentIndex() == 2:
-            self.bille_suivant.show()
-
-    # ───── Navigation entre pages ─────
+    # ───── Navigation ─────
     def Fenetreregle(self):
         self.pages.setCurrentIndex(1)
         self.bille_suivant.hide()
@@ -298,48 +278,50 @@ class FenetreDebut(QMainWindow):
 
     def Fenetrejeu1(self):
         self.pages.setCurrentIndex(2)
-        # Repositionne et affiche la bille
         w = self.width()
         h = self.height()
         rayon = self.bille_suivant.rayon
         self.bille_suivant.move((w - rayon * 2) // 2, int(h * 0.65))
         self.bille_suivant.show()
-        self.bille_suivant.raise_()  # passe au premier plan
+        self.bille_suivant.raise_()
 
     def Fenetrejeu2(self):
         self.pages.setCurrentIndex(3)
         self.bille_suivant.hide()
         self._lancer_partie()
 
-
-    #___Mise à jour du label "Match de X contre Y"___
+    #___Mise à jour du label___
     def Changer_label(self):
         self.Label_jeu.setText(
             f"Match de {self.Edit_J1.text()} contre {self.Edit_J2.text()}"
         )
 
     # ───── Logique de partie ─────
-
-    #___Création du Jeu et branchement à la TableBillard___
     def _lancer_partie(self):
         if self.jeu is not None:
             return
-
         nom1 = self.Edit_J1.text() or "Joueur 1"
         nom2 = self.Edit_J2.text() or "Joueur 2"
-
         self.jeu = Jeu(nom1, nom2)
         self.tableBillard.table = self.jeu.table
         self.jeu.table_billard = self.tableBillard
         self.tableBillard.angle_choisi.connect(self._coup_par_clic)
         self.tableBillard.update()
-
         joueur = self.jeu.joueur_actuel()
         self.Label_jeu.setText(f"Au tour de {joueur.nom}")
-
-        # Branche le panneau latéral sur la partie en cours
         if self.panneau is not None:
             self.panneau.rafraichir(self.jeu)
+
+    #___Coup déclenché par le bouton "Jouer Coup"___
+    def jouer_coup(self):
+        if self.jeu is None:
+            return
+        if self.timer.isActive():
+            return
+        force = self.slider_force_custom.value() / 100.0
+        angle = math.radians(self.slider_Angle.value())
+        self.jeu.jouer_coup(angle, force)
+        self.timer.start(16)
 
     #___Coup déclenché par clic sur la table___
     def _coup_par_clic(self, angle_rad):
@@ -347,28 +329,21 @@ class FenetreDebut(QMainWindow):
             return
         if self.jeu is None or self.jeu.est_termine():
             return
-
-        force = self.slider_Force.value() / 100.0
-        if force <= 0:  # sécurité : pas de coup si force nulle
+        force = self.slider_force_custom.value() / 100.0
+        if force <= 0:
             return
-
         self.jeu.jouer_coup(angle_rad, force)
-
         self.tableBillard.visee_active = False
         self.tableBillard.curseur_x = None
         self.tableBillard.update()
-
         self.timer.start(16)
 
-    #___Une frame d'animation, appelée 60 fois par seconde___
+    #___Une frame d'animation___
     def _frame_animation(self):
         self.jeu.mettre_a_jour()
-
         if self.jeu.table.est_arretee():
             self.timer.stop()
             self.jeu.fin_de_coup()
-
-            # Partie terminée : on annonce le résultat et on ne réarme rien
             if self.jeu.est_termine():
                 if self.panneau is not None:
                     self.panneau.rafraichir()
@@ -378,16 +353,11 @@ class FenetreDebut(QMainWindow):
                     message += f"\n\n{self.jeu.raison_fin}"
                 QMessageBox.information(self, "Fin de partie", message)
                 return
-
             joueur = self.jeu.joueur_actuel()
-
-            # Met à jour le panneau (billes rentrées, tour, faute)
             if self.panneau is not None:
                 self.panneau.rafraichir()
-
-            # Blanche en main (après une faute) : le joueur la replace d'abord
             if self.jeu.blanche_en_main:
-                self.jeu.blanche_en_main = False        # consommé
+                self.jeu.blanche_en_main = False
                 self.Label_jeu.setText(
                     f"{joueur.nom} : placez la blanche sur la ligne, puis visez vers l'avant"
                 )
@@ -395,12 +365,9 @@ class FenetreDebut(QMainWindow):
             else:
                 self.Label_jeu.setText(f"Au tour de {joueur.nom}")
                 self.tableBillard.visee_active = True
-
             self.tableBillard.update()
 
     # ───── Fermeture ─────
-
-    #___Demande de confirmation à la fermeture___
     def closeEvent(self, event):
         reponse = QMessageBox.question(
             self, "Confirmation", "Êtes-vous sûr de vouloir quitter ?",
@@ -413,3 +380,8 @@ class FenetreDebut(QMainWindow):
             event.ignore()
 
 
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    fenetre = FenetreDebut()
+    fenetre.show()
+    sys.exit(app.exec())
