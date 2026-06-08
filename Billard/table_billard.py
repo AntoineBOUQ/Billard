@@ -1,4 +1,3 @@
-
 import math
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 from PyQt6.QtGui import QPainter, QColor, QBrush, QPen, QPolygonF
@@ -38,6 +37,9 @@ class TableBillard(QWidget):
         # Permet de couper la visée pendant l'animation des billes
         self.visee_active = True
 
+        # Mode "bille en main" : le joueur place la blanche sur la ligne de service
+        self.placement_actif = False
+
     #___Calcul de la mise à l'échelle (logique → pixels)___
         # ___Calcul de la mise à l'échelle (logique → pixels)___
     def _calculer_transformation(self):
@@ -68,14 +70,39 @@ class TableBillard(QWidget):
 
     # ───── Événements souris ─────
 
+    #___Active le placement de la blanche "en main" (sur la ligne de service)___
+    def commencer_placement(self):
+        self.placement_actif = True
+        self.visee_active = False           # pas de visée tant que la bille n'est pas posée
+        self.curseur_x = None
+        if self.table is not None:
+            blanche = self.table.get_bille_blanche()
+            blanche.x = self.LARGEUR_LOGIQUE / 4    # ligne de service
+            blanche.y = self.HAUTEUR_LOGIQUE / 2    # centre par défaut
+        self.update()
+
     #___Mouvement de la souris___
     def mouseMoveEvent(self, event):
-        if not self.visee_active or self.table is None:
+        if self.table is None:
             return
         # Conversion pixels → logique
         x_log, y_log = self._widget_vers_logique(
             event.position().x(), event.position().y()
         )
+
+        # Mode placement : la blanche glisse le long de la ligne de service
+        if self.placement_actif:
+            blanche = self.table.get_bille_blanche()
+            blanche.x = self.LARGEUR_LOGIQUE / 4            # x figé sur la ligne
+            y_min = blanche.rayon
+            y_max = self.HAUTEUR_LOGIQUE - blanche.rayon
+            blanche.y = max(y_min, min(y_max, y_log))       # y borné au tapis
+            self.update()
+            return
+
+        if not self.visee_active:
+            return
+
         self.curseur_x = x_log
         self.curseur_y = y_log
 
@@ -97,10 +124,21 @@ class TableBillard(QWidget):
 
     #___Clic souris___
     def mousePressEvent(self, event):
-        if not self.visee_active or self.table is None:
+        if self.table is None:
             return
         # On ne réagit qu'au clic gauche
         if event.button() != Qt.MouseButton.LeftButton:
+            return
+
+        # Mode placement : le clic valide la position de la blanche, puis on vise
+        if self.placement_actif:
+            self.placement_actif = False
+            self.visee_active = True
+            self.curseur_x = None       # le joueur doit re-survoler pour viser
+            self.update()
+            return
+
+        if not self.visee_active:
             return
         # Émission du signal : l'interface va déclencher le coup
         self.angle_choisi.emit(self.angle_visee)
@@ -158,7 +196,11 @@ class TableBillard(QWidget):
                                 rayon_trou * 2, rayon_trou * 2)
 
             # 7. Ligne de service et cercle de service (côté blanche)
-        peintre.setPen(QPen(QColor(255, 255, 255, 80), 1))
+        if self.placement_actif:
+            # Mise en évidence pendant le placement de la blanche
+            peintre.setPen(QPen(QColor(255, 230, 0, 200), 2))
+        else:
+            peintre.setPen(QPen(QColor(255, 255, 255, 80), 1))
         peintre.setBrush(Qt.BrushStyle.NoBrush)
         x_service = W // 4
         peintre.drawLine(x_service, 0, x_service, H)

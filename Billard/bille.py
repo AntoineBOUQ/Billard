@@ -1,4 +1,3 @@
-
 class Bille:
     """
     Classe mère représentant une bille de billard.
@@ -13,18 +12,24 @@ class Bille:
         self.vitesse_y = 0.0        # composante verticale de la vitesse
         self.empochee = False       # passe à True quand la bille tombe dans un trou
 
-    #___Déplacement d'une frame avec frottement___
+    #___Déplacement d'une frame avec frottement (conservé pour compatibilité)___
     def deplacer(self):
-        # Mise à jour de la position selon la vitesse
-        self.x += self.vitesse_x
-        self.y += self.vitesse_y
+        # Avance d'un pas complet puis applique le frottement
+        self.avancer(1.0)
+        self.appliquer_frottement()
 
-        # Application du frottement : à chaque image, on perd 2% de la vitesse
+    #___Avance (éventuellement fractionnée) SANS frottement — pour les sous-pas___
+    def avancer(self, fraction=1.0):
+        self.x += self.vitesse_x * fraction
+        self.y += self.vitesse_y * fraction
+
+    #___Applique le frottement (une seule fois par frame)___
+    def appliquer_frottement(self):
+        # À chaque image, on perd 2% de la vitesse
         frottement = 0.98
         self.vitesse_x *= frottement
         self.vitesse_y *= frottement
-
-        # Quand la vitesse devient très faible, on l'arrête.
+        # Quand la vitesse devient très faible, on l'arrête
         # (sinon le frottement multiplicatif n'atteindrait jamais 0)
         if abs(self.vitesse_x) < 0.01:
             self.vitesse_x = 0.0
@@ -66,4 +71,3 @@ class BilleNumerotee(Bille):
         super().__init__(x, y)
         self.numero = numero        # numéro 1..15
         self.couleur = couleur      # nom textuel de la couleur
-
