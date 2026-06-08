@@ -12,7 +12,7 @@ class Queue:
     def __init__(self):
         self.longueur = 150.0       # longueur visuelle (pour un éventuel affichage)
         self.angle = 0.0            # angle de visée en radians
-        self.force_max = 20.0       # vitesse maximale qu'on peut imprimer à la blanche
+        self.force_max = 40.0       # vitesse maximale qu'on peut imprimer à la blanche
 
     #___Mémoriser la direction de visée___
     def viser(self, angle: float):
